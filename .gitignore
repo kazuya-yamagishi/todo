@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# production
+.next/
+out/
+
+# misc
+.DS_Store
+*.pem
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# claude code local settings
+.claude/settings.local.json
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

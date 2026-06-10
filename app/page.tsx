@@ -96,10 +96,10 @@ function IllustrationHero() {
       <ellipse cx="105" cy="133" rx="10" ry="6" fill="#c4b5fd" />
       <ellipse cx="131" cy="133" rx="10" ry="6" fill="#c4b5fd" />
 
-      {/* zzz（眠りのz） */}
-      <text x="146" y="72" fontSize="11" fill="#c4b5fd"  opacity="0.80" fontWeight="bold">z</text>
-      <text x="155" y="61" fontSize="9"  fill="#a78bfa"  opacity="0.65" fontWeight="bold">z</text>
-      <text x="162" y="52" fontSize="7"  fill="#ddd6fe"  opacity="0.50" fontWeight="bold">z</text>
+      {/* 音符（♪） */}
+      <text x="144" y="72" fontSize="13" fill="#fde68a"  opacity="0.85">♪</text>
+      <text x="155" y="60" fontSize="10" fill="#a78bfa"  opacity="0.70">♫</text>
+      <text x="163" y="51" fontSize="8"  fill="#ddd6fe"  opacity="0.55">♩</text>
     </svg>
   );
 }
@@ -164,41 +164,50 @@ export default function HomePage() {
   const [newPriority, setNewPriority] = useState<Priority>('medium');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // ページ読み込み時に localStorage から復元
   useEffect(() => {
-    const saved = localStorage.getItem('todos');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // 既存データに priority がない場合は 'medium' を補完
-        setTodos(parsed.map((t: Todo) => ({ ...t, priority: t.priority ?? 'medium' })));
-      } catch { /* 破損データは無視 */ }
-    }
+    fetch('/api/todos').then(r => r.json()).then(setTodos);
   }, []);
 
-  // todos が変わるたびに localStorage へ保存
-  useEffect(() => {
-    localStorage.setItem('todos', JSON.stringify(todos));
-  }, [todos]);
-
-  const addTodo = () => {
+  const addTodo = async () => {
     const text = input.trim();
     if (!text) return;
-    setTodos(prev => [...prev, { id: Date.now(), text, done: false, priority: newPriority }]);
+    const res = await fetch('/api/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, priority: newPriority }),
+    });
+    const todo = await res.json();
+    setTodos(prev => [...prev, todo]);
     setInput('');
     inputRef.current?.focus();
   };
 
-  const toggleTodo = (id: number) =>
-    setTodos(prev => prev.map(t => (t.id === id ? { ...t, done: !t.done } : t)));
+  const toggleTodo = async (id: number) => {
+    const todo = todos.find(t => t.id === id)!;
+    const res = await fetch(`/api/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ done: !todo.done }),
+    });
+    const updated = await res.json();
+    setTodos(prev => prev.map(t => t.id === id ? updated : t));
+  };
 
-  const deleteTodo = (id: number) =>
+  const deleteTodo = async (id: number) => {
+    await fetch(`/api/todos/${id}`, { method: 'DELETE' });
     setTodos(prev => prev.filter(t => t.id !== id));
+  };
 
-  const cyclePriority = (id: number) =>
-    setTodos(prev => prev.map(t =>
-      t.id === id ? { ...t, priority: PRIORITY_NEXT[t.priority] } : t
-    ));
+  const cyclePriority = async (id: number) => {
+    const todo = todos.find(t => t.id === id)!;
+    const res = await fetch(`/api/todos/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ priority: PRIORITY_NEXT[todo.priority] }),
+    });
+    const updated = await res.json();
+    setTodos(prev => prev.map(t => t.id === id ? updated : t));
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') addTodo();
@@ -218,7 +227,8 @@ export default function HomePage() {
         {/* ヒーローイラスト */}
         <IllustrationHero />
 
-        <h1>🌙 Todoリスト</h1>
+        <h1>🎸 松本に相談しようか</h1>
+        <p className="subtitle">— B&apos;z「恋心」より —</p>
 
         {/* 入力エリア */}
         <div className="add-section">
@@ -228,7 +238,7 @@ export default function HomePage() {
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="やることを入力..."
+            placeholder="松本に相談することを入力..."
             className="todo-input"
             autoFocus
           />
@@ -242,17 +252,17 @@ export default function HomePage() {
             <option value="medium">中</option>
             <option value="low">低</option>
           </select>
-          <button onClick={addTodo} className="add-btn">追加</button>
+          <button onClick={addTodo} className="add-btn">相談する</button>
         </div>
-        <p className="hint">Enter キーでも追加できます</p>
+        <p className="hint">Enter キーでも松本に相談できます</p>
 
         {/* リスト or 空状態 */}
         {todos.length === 0 ? (
           <div className="empty">
             <IllustrationEmpty />
             <p>
-              タスクはまだありません。<br />
-              上の入力欄からタスクを追加してみましょう！
+              まだ松本への相談がありません。<br />
+              迷ったら、松本に相談してみよう！
             </p>
           </div>
         ) : (
@@ -289,7 +299,7 @@ export default function HomePage() {
                 </li>
               ))}
             </ul>
-            <p className="count">残り {remaining} 件 / 全 {todos.length} 件</p>
+            <p className="count">残り相談 {remaining} 件 / 全 {todos.length} 件</p>
           </>
         )}
 
